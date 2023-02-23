@@ -1,0 +1,380 @@
+
+from tkinter import *
+from tkinter import filedialog, messagebox, ttk
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import time
+import os
+import datetime as dt
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from pylab import mpl
+
+mpl.rcParams["font.sans-serif"] = ["SimSun"]        # 使用黑體
+mpl.rcParams["axes.unicode_minus"] = False  
+
+
+
+def File_dialog(): #選取檔案，得到檔案路徑
+    """This Function will open the file explorer and assign the chosen file path to label_file"""
+    filename = filedialog.askopenfilename(initialdir="/",
+                                          title="Select A File",
+                                          filetype=(("xlsx files", "*.xlsx"),("All Files", "*.*")))
+    label_file["text"] = filename
+    return None
+
+
+
+def p1_pic(): #使用該檔案路徑，產生新的dataframe，並繪製3張圖表
+    #使用檔案路徑
+    file_path = label_file["text"] 
+    excel_filename = r"{}".format(file_path)
+    df = pd.read_excel(excel_filename)
+    df.head()
+    
+    #修改dataframe的內容
+    df['C_cost'] = df['SubTotal']*0.5 #取得商品成本
+    P_cost = [] #取得金流成本
+    for i in range(len(df['Payment'])):
+        if df['Payment'][i] == '信用卡':
+            c = df['Total'][i]*0.03
+        else:
+            c = 0
+        P_cost.append(c)
+    df['P_cost'] = P_cost
+    
+    D_cost = [] #取得物流成本
+    for i in range(len(df['Delivery'])):
+        if df['Delivery'][i] == '宅配' :
+            c = 120
+        else:
+            c = 65
+        D_cost.append(c)
+    df['D_cost'] = D_cost
+    
+    df['Cost'] = df['C_cost']+df['P_cost']+df['D_cost'] #計算總成本
+    df['Profit'] = df['Total']-df['Cost'] #計算營利
+
+    #建立第一張圖表
+    figure3 = plt.Figure(figsize=(6, 5), dpi=100)
+    ax3 = figure3.add_subplot(111)
+    line3 = FigureCanvasTkAgg(figure3, section_a)
+    line3.get_tk_widget().grid(row=9,column=0)
+    df_a = df.groupby(by='Order Date',as_index=False)['Order ID'].count()
+    
+    rows = (df_a['Order Date'] >= d1.get()) & (df_a['Order Date'] <= d2.get()) #篩選需要出現的列資料，根據日期決定
+    columns = ['Order Date','Order ID'] #篩選需要出現的欄位
+    result = df_a.loc[rows, columns] #loc[rows, colums]來選擇所需的資料集
+    result.columns = ['Date','訂單量']
+    result.set_index('Date', inplace=True) #將索引值由Order Date欄位所取代
+    a = list(result.index)
+    chart_c = result.plot(title='訂單', xlabel='日期',legend=True,figsize=(10, 5),ax=ax3)  # 圖表大小
+    plt.xticks(a)
+    
+    #建立第二張圖表
+    figure1 = plt.Figure(figsize=(6, 5), dpi=100) #建立畫布
+    ax1 = figure1.add_subplot(111) #將子圖表添加到畫布裡指定的位置(row1,column1,index1)
+    bar1 = FigureCanvasTkAgg(figure1, section_a) #?
+    bar1.get_tk_widget().grid(row=9,column=1)
+    df_a = df.groupby(by='Order Date',as_index=False).agg({'Total':np.sum,'Profit':np.sum})
+    Profit_Rate = []
+    for i in range(len(df_a['Profit'])):
+        r = df_a['Profit'][i]/df_a['Total'][i]*100
+        r = round (r)
+        Profit_Rate.append(r)
+    df_a['Profit Rate'] = Profit_Rate
+    rows = (df_a['Order Date'] >= d1.get()) & (df_a['Order Date'] <= d2.get()) #篩選需要出現的列資料，根據日期決定
+    columns = ['Order Date','Profit Rate'] #篩選需要出現的欄位
+    result = df_a.loc[rows, columns] #loc[rows, colums]來選擇所需的資料集
+    result.columns = ['Date','營業利益率']
+    result.set_index('Date', inplace=True) #將索引值由Order Date欄位所取代
+    a = list(result.index)
+    chart_b = result.plot(title='營業利益率 (%)', xlabel='日期',legend=True,color='green',figsize=(10, 5),ax=ax1)  # 圖表大小
+    plt.xticks(a)
+    
+    #建立第三張圖表
+    figure2 = plt.Figure(figsize=(6, 5), dpi=100)
+    ax2 = figure2.add_subplot(111)
+    line2 = FigureCanvasTkAgg(figure2, section_a)
+    line2.get_tk_widget().grid(row=9,column=2)
+    df_a = df.groupby(by='Order Date',
+                            as_index=False).agg({'Total':np.sum,'Profit':np.sum})
+    Profit_Rate = []
+    for i in range(len(df_a['Profit'])):
+        r = df_a['Profit'][i]/df_a['Total'][i]*100
+        r = round (r)
+        Profit_Rate.append(r)
+    df_a['Profit Rate'] = Profit_Rate
+    
+    rows = (df_a['Order Date'] >= d1.get()) & (df_a['Order Date'] <= d2.get()) #篩選需要出現的列資料，根據日期決定
+    columns = ['Order Date','Total','Profit'] #篩選需要出現的欄位
+    result = df_a.loc[rows, columns] #loc[rows, colums]來選擇所需的資料集
+    result.columns = ['Date','營業收入','營業利益']
+    result.set_index('Date', inplace=True) #將索引值由Order Date欄位所取代
+    a = list(result.index)
+    chart = result.plot(title='營業收入 & 營業利益 ($)',  #圖表標題
+                        xlabel='日期',  #x軸說明文字
+                        legend=True,  # 是否顯示圖例
+                        figsize=(10, 5),
+                        ax=ax2)  # 圖表大小
+    plt.xticks(a)
+
+
+
+def Load_RFM_data(): 
+    root = Tk()
+    root.title('RFM智慧顧客分群')
+    labelo_3= Label(root)
+    labelo_3.grid(row=1)
+    frame1 = LabelFrame(root, text="RFM智慧顧客分群",font=30,pady=5)
+    frame1.grid(row=2,ipadx=400,ipady=100)
+    
+    def download():
+        wr = pd.ExcelWriter(r'C:\Users\Admin\Desktop\顧客分群資料.xlsx')
+        contact_info = ['Customer ID','Phone','Email']
+        df_top[contact_info].to_excel(wr,sheet_name='TOP顧客')
+        df_loyal[contact_info].to_excel(wr,sheet_name='忠誠顧客')
+        df_active[contact_info].to_excel(wr,sheet_name='活躍顧客')
+        df_practive[contact_info].to_excel(wr,sheet_name='準備回購舊客')
+        df_sleep[contact_info].to_excel(wr,sheet_name='沉睡顧客')
+        df_new[contact_info].to_excel(wr,sheet_name='新消費顧客')
+        df_pnactive[contact_info].to_excel(wr,sheet_name='潛在回購新客')
+        df_lost[contact_info].to_excel(wr,sheet_name='流失顧客')
+        wr.save()
+        messagebox.showwarning('提醒','下載完成')
+        
+    labelo_4= Label(root)
+    labelo_4.grid(row=3)
+
+    download_button = Button(root,text='下  載',font=10,command=download,width=8)
+    download_button.grid(row=4)
+    
+    labelo_5= Label(root)
+    labelo_5.grid(row=5)
+    
+    """If the file selected is valid this will load the file into the Treeview"""
+    #使用檔案路徑
+    file_path = label_file["text"] 
+    excel_filename = r"{}".format(file_path)
+    df = pd.read_excel(excel_filename)
+    #依照顧客分組，OrderDate採其最大值
+    df_recency = df.groupby(by='Customer ID',
+                            as_index=False)['Order Date'].max()
+    #將欄位重新命名
+    df_recency.columns = ['Customer ID', 'LastPurchaseDate']
+    #找到最近的訂單日期
+    recent_date = df_recency['LastPurchaseDate'].max()
+    #計算每個人最後消費日期，距離最近訂單日期的差距，也就是Recency，R值越小越好
+    df_recency['Recency'] = df_recency['LastPurchaseDate'].apply(
+        lambda x: (recent_date - x).days)
+
+
+    #依照顧客分組，OrderDate採其數量，得到frequency，越高越好
+    frequency_df = df.drop_duplicates().groupby(
+        by=['Customer ID'], as_index=False)['Order Date'].count()
+    #將欄位重新命名
+    frequency_df.columns = ['Customer ID', 'Frequency']
+
+    #依照顧客分組，Total做加總，得到monetary，越高越好
+    monetary_df = df.groupby(by='Customer ID', as_index=False)['Total'].sum()
+    #將欄位重新命名
+    monetary_df.columns = ['Customer ID', 'Monetary']
+
+    #合併recency和原本訂單資料
+    rf_df = df_recency.merge(df,on='Customer ID')
+    #合併recency和frequency表，以CustomerName做關聯key
+    rf_df = rf_df.merge(frequency_df, on='Customer ID')
+    #再合併monetary表，以CustomerName做關聯key
+    rfm_df = rf_df.merge(monetary_df, on='Customer ID').drop(
+     	columns='LastPurchaseDate')
+
+
+    #回購率計算
+    #依照顧客分組，並計算出最後一次購買與第一次購買間隔天數
+    df_repurchase = df.groupby(by='Customer ID',as_index=False)['Order Date'].agg({'repurchase_T': lambda x: (x.max()- x.min()).days})
+    #合併recency和frequency表，以CustomerName做關聯key
+    rfm_df = rfm_df.merge(df_repurchase, on='Customer ID')
+
+
+    #新增r,f,m的排名，r值越小，ranking愈高，f,m值越小，ranking越低
+    rfm_df['R_rank'] = rfm_df['Recency'].rank(ascending=False)
+    rfm_df['F_rank'] = rfm_df['Frequency'].rank(ascending=True)
+    rfm_df['M_rank'] = rfm_df['Monetary'].rank(ascending=True)
+
+    #各自排名/排名最大值，得出個人rfm各ranking百分比
+    # normalizing the rank of the customers
+    rfm_df['R_rank_norm'] = (rfm_df['R_rank']/rfm_df['R_rank'].max())*100
+    rfm_df['F_rank_norm'] = (rfm_df['F_rank']/rfm_df['F_rank'].max())*100
+    rfm_df['M_rank_norm'] = (rfm_df['F_rank']/rfm_df['M_rank'].max())*100
+
+    #把排名的欄位刪除
+    rfm_df.drop(columns=['R_rank', 'F_rank', 'M_rank'], inplace=True)
+    rfm_df.head() 
+    df = rfm_df
+
+    #利用間隔天數/(frequency-1) 計算出每個人的回購週期
+    rfm_df['repurchase'] = round(rfm_df['repurchase_T'] / (rfm_df['Frequency']-1))
+    df_repurchase = df['repurchase'].median()#計算整體回購週期，提取中位數
+    df_recently = df_repurchase*0.8 #近期的天數定義
+
+
+    # 新消費顧客 	近期剛消費的單次消費顧客
+    filter_new = (df['Recency']<= df_recently) & (df['Frequency'] == 1)
+    df_new = df[filter_new]
+
+    #活躍顧客	近期剛消費的重複消費顧客
+    filter_active = (df['Recency']<= df_recently) & (df['Frequency'] > 1)
+    df_active = df[filter_active]
+
+    #潛在回購新客	    近期準備回購的單次消費顧客
+    filter_pnactive = (abs(df['Recency']-df_repurchase) < df_recently) & (df['Frequency'] == 1 )
+    df_pnactive = df[filter_pnactive]
+
+    #準備回購舊客	   近期準備回購的重複消費顧客
+    filter_practive = (abs(df['Recency']-df_repurchase) < df_recently) & (df['Frequency'] > 1 )
+    df_practive = df[filter_practive]
+
+    #流失顧客	久未消費的單次消費顧客 
+    filter_lost = (df['Recency'] > df_repurchase*3) & (df['Frequency'] == 1 )
+    df_lost = df[filter_lost]
+
+    #沈睡顧客	久未消費的重複消費顧客
+    filter_sleep = (df['Recency'] > df_repurchase*3) & (df['Frequency'] > 1 )
+    df_sleep = df[filter_sleep]
+
+    #忠誠顧客	近期剛消費，且累積訂單數大於等於 Top 25%
+    filter_loyal = (df['Recency'] < df_recently) & (df['F_rank_norm'] > 75)
+    df_loyal = df[filter_loyal]
+
+    #Top 顧客	近期剛消費，且累積訂單數及累積消費金額皆為 Top 10% 的重複消費顧客
+    filter_top = (df['Recency'] < df_recently) & ((df['F_rank_norm'] >= 90) | (df['M_rank_norm'] >= 90))
+    df_top = df[filter_top]
+    
+
+    group = [df_top,df_loyal,df_active,df_practive,df_sleep,df_new,df_pnactive,df_lost]
+    df_top_n = ['TOP顧客']
+    df_loyal_n = ['忠誠顧客']
+    df_new_n= ['新消費顧客']
+    df_active_n = ['活躍顧客']
+    df_pnactive_n = ['潛在回購新客']
+    df_practive_n = ['準備回購舊客']
+    df_lost_n = ['流失顧客']
+    df_sleep_n = ['沉睡顧客']
+    group_a = [df_top_n,df_loyal_n,df_active_n,df_practive_n,df_sleep_n,df_new_n,df_pnactive_n,df_lost_n]
+    for i in range(len(group)):
+        people = group[i]['Customer ID'].count() #人數
+        p_percent = (people / df['Customer ID'].count())
+        a = str(people)+' ('+('{:.0f}%'.format(p_percent*100))+')' #人數%
+        group_a[i].append(a)
+        order = group[i]['Frequency'].sum() #訂單數
+        order_a = format(order,',')
+        o_percent = (order / df['Frequency'].sum())
+        a = str(order_a)+' ('+('{:.0f}%'.format(o_percent*100))+')' #訂單數%
+        group_a[i].append(a)
+        avpo = round(order/people) #平均顧客訂單量
+        group_a[i].append(avpo)
+        total = group[i]['Monetary'].sum() #累積金額
+        total_a = format(total,',')
+        t_percent = (total / df['Monetary'].sum())
+        a = '$'+str(total_a)+' ('+('{:.0f}%'.format(t_percent*100))+')' #訂單數%
+        group_a[i].append(a)
+        avpv = round(total / people) #平均顧客終身價值
+        avpv = '$'+format(avpv,',')
+        group_a[i].append(avpv)
+        retime = group[i]['repurchase'].median() #購買週期
+        group_a[i].append(retime)
+        recent = round(group[i]['Recency'].median()) #最近消費天數
+        group_a[i].append(recent)
+    df_all = pd.DataFrame(group_a)
+    df_all.columns = ['分眾','人數','訂單數','平均顧客訂單量','累積金額','平均顧客終身價值','購買週期','最近消費天數']
+
+
+    ## Treeview Widget
+    tv1 = ttk.Treeview(frame1,padding=0.2)
+    tv1.place(relheight=1, relwidth=1) # set the height and width of the widget to 100% of its container (frame1).
+    
+    treescrolly = Scrollbar(frame1, orient="vertical", command=tv1.yview) # command means update the yaxis view of the widget
+    treescrollx = Scrollbar(frame1, orient="horizontal", command=tv1.xview) # command means update the xaxis view of the widget
+    tv1.configure(xscrollcommand=treescrollx.set, yscrollcommand=treescrolly.set) # assign the scrollbars to the Treeview Widget
+    treescrollx.pack(side="bottom", fill="x") # make the scrollbar fill the x axis of the Treeview widget
+    treescrolly.pack(side="right", fill="y") # make the scrollbar fill the y axis of the Treeview widget
+    
+    
+    tv1["column"] = list(df_all.columns)
+    tv1["show"] = "headings"
+
+    for column in tv1["columns"]:
+        tv1.heading(column, text=column) # let the column heading = column name
+    tv1.column("分眾", width=80,anchor=CENTER)
+    tv1.column("人數", width=80,anchor=CENTER)
+    tv1.column("訂單數", width=80,anchor=CENTER)
+    tv1.column("平均顧客訂單量", width=80,anchor=CENTER)
+    tv1.column("累積金額", width=100,anchor=CENTER)
+    tv1.column("平均顧客終身價值", width=100,anchor=CENTER)
+    tv1.column("購買週期", width=80,anchor=CENTER)
+    tv1.column("最近消費天數", width=80,anchor=CENTER)
+    df_rows = df_all.to_numpy().tolist() # turns the dataframe into a list of lists
+    
+    for row in df_rows:
+        tv1.insert("", "end", values=row) # inserts each list into the treeview. For parameters see https://docs.python.org/3/library/tkinter.ttk.html#tkinter.ttk.Treeview.insert
+
+    return None
+    root.mainloop()
+    
+
+
+
+#tkinter介面
+window = Tk()
+window.title('營利分析 & 顧客分群')
+
+# Frame for open file dialog
+file_frame = LabelFrame(window, text="檔案匯入", padx=20, pady=5, font=30)
+file_frame.grid(row=0)
+
+# The file/file path text
+label_file = Label(file_frame, text="尚未選擇檔案",pady=5)
+label_file.grid(row=1)
+
+# Buttons
+button1 = Button(file_frame, text="瀏覽檔案", command=lambda: File_dialog())
+button1.grid(row=2)
+
+labelo_2= Label(window)
+labelo_2.grid(row=3)
+
+
+file_frame_2 = LabelFrame(window, text="營利計算區間 (YYYY-MM-DD)",font=30,padx=20,pady=10)
+file_frame_2.grid(row=5)
+
+l_start = Label(file_frame_2,text='起始日期')
+l_end = Label(file_frame_2,text='結束日期')
+d1 = StringVar()
+d2 = StringVar()
+entry_s = Entry(file_frame_2,textvariable=d1) #起始日期填寫
+entry_s.insert(1,'2023-01-23')
+entry_e = Entry(file_frame_2,textvariable=d2) #結束日期填寫
+# entry_e.insert(1,'2023-02-09')
+l_start.grid(row=6,column=0)
+entry_s.grid(row=6,column=1)
+l_end.grid(row=7,column=0,pady=5)
+entry_e.grid(row=7,column=1,pady=5)
+button_2 = Button(file_frame_2,text='確認',command=p1_pic) #確認按鈕
+button_2.grid(row=8,columnspan=2)
+
+labelo_1= Label(window)
+labelo_1.grid(row=9)
+
+file_frame_3 = LabelFrame(window, text="智能顧客分群",font=30,padx=30,pady=10)
+file_frame_3.grid(row=10)
+button_1 = Button(file_frame_3,text='查看',command=Load_RFM_data) #確認按鈕
+button_1.grid(row=11)
+
+section_a = LabelFrame(window, text="圖表",font=30)
+section_a.grid(row=30)
+
+
+window.mainloop()
+
