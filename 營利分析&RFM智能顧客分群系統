@@ -1,24 +1,24 @@
+# -*- coding: utf-8 -*-
+
+#營利分析 & RFM顧客分群系統
 
 from tkinter import *
 from tkinter import filedialog, messagebox, ttk
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import time
 import os
 import datetime as dt
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from pylab import mpl
 
-mpl.rcParams["font.sans-serif"] = ["SimSun"]        # 使用黑體
+mpl.rcParams["font.sans-serif"] = ["SimSun"]     #使圖表可以顯示中文字  # 使用黑體
 mpl.rcParams["axes.unicode_minus"] = False  
 
 
 
 def File_dialog(): #選取檔案，得到檔案路徑
-    """This Function will open the file explorer and assign the chosen file path to label_file"""
     filename = filedialog.askopenfilename(initialdir="/",
                                           title="Select A File",
                                           filetype=(("xlsx files", "*.xlsx"),("All Files", "*.*")))
@@ -67,10 +67,10 @@ def p1_pic(): #使用該檔案路徑，產生新的dataframe，並繪製3張圖�
     rows = (df_a['Order Date'] >= d1.get()) & (df_a['Order Date'] <= d2.get()) #篩選需要出現的列資料，根據日期決定
     columns = ['Order Date','Order ID'] #篩選需要出現的欄位
     result = df_a.loc[rows, columns] #loc[rows, colums]來選擇所需的資料集
-    result.columns = ['Date','訂單量']
-    result.set_index('Date', inplace=True) #將索引值由Order Date欄位所取代
+    result.columns = ['日期','訂單量']
+    result.set_index('日期', inplace=True) #將索引值由Order Date欄位所取代
     a = list(result.index)
-    chart_c = result.plot(title='訂單', xlabel='日期',legend=True,figsize=(10, 5),ax=ax3)  # 圖表大小
+    chart_c = result.plot(title='訂單',legend=True,figsize=(10, 5),ax=ax3)  # 圖表大小
     plt.xticks(a)
     
     #建立第二張圖表
@@ -88,10 +88,10 @@ def p1_pic(): #使用該檔案路徑，產生新的dataframe，並繪製3張圖�
     rows = (df_a['Order Date'] >= d1.get()) & (df_a['Order Date'] <= d2.get()) #篩選需要出現的列資料，根據日期決定
     columns = ['Order Date','Profit Rate'] #篩選需要出現的欄位
     result = df_a.loc[rows, columns] #loc[rows, colums]來選擇所需的資料集
-    result.columns = ['Date','營業利益率']
-    result.set_index('Date', inplace=True) #將索引值由Order Date欄位所取代
+    result.columns = ['日期','營業利益率']
+    result.set_index('日期', inplace=True) #將索引值由Order Date欄位所取代
     a = list(result.index)
-    chart_b = result.plot(title='營業利益率 (%)', xlabel='日期',legend=True,color='green',figsize=(10, 5),ax=ax1)  # 圖表大小
+    chart_b = result.plot(title='營業利益率 (%)',legend=True,color='green',figsize=(10, 5),ax=ax1)  # 圖表大小
     plt.xticks(a)
     
     #建立第三張圖表
@@ -111,19 +111,15 @@ def p1_pic(): #使用該檔案路徑，產生新的dataframe，並繪製3張圖�
     rows = (df_a['Order Date'] >= d1.get()) & (df_a['Order Date'] <= d2.get()) #篩選需要出現的列資料，根據日期決定
     columns = ['Order Date','Total','Profit'] #篩選需要出現的欄位
     result = df_a.loc[rows, columns] #loc[rows, colums]來選擇所需的資料集
-    result.columns = ['Date','營業收入','營業利益']
-    result.set_index('Date', inplace=True) #將索引值由Order Date欄位所取代
+    result.columns = ['日期','營業收入','營業利益']
+    result.set_index('日期', inplace=True) #將索引值由Order Date欄位所取代
     a = list(result.index)
-    chart = result.plot(title='營業收入 & 營業利益 ($)',  #圖表標題
-                        xlabel='日期',  #x軸說明文字
-                        legend=True,  # 是否顯示圖例
-                        figsize=(10, 5),
-                        ax=ax2)  # 圖表大小
+    chart = result.plot(title='營業收入 & 營業利益 ($)', legend=True, figsize=(10, 5), ax=ax2)  
     plt.xticks(a)
 
 
 
-def Load_RFM_data(): 
+def Load_RFM_data(): #進行RFM分析，製作包含8個分眾的貢獻的表格
     root = Tk()
     root.title('RFM智慧顧客分群')
     labelo_3= Label(root)
@@ -131,8 +127,8 @@ def Load_RFM_data():
     frame1 = LabelFrame(root, text="RFM智慧顧客分群",font=30,pady=5)
     frame1.grid(row=2,ipadx=400,ipady=100)
     
-    def download():
-        wr = pd.ExcelWriter(r'C:\Users\Admin\Desktop\顧客分群資料.xlsx')
+    def download(): #下載各分眾的顧客資料
+        wr = pd.ExcelWriter(r'C:\Users\Admin\Desktop\顧客分群資料.xlsx') #檔案儲存位置，請依照個人需求，存放於合適位置
         contact_info = ['Customer ID','Phone','Email']
         df_top[contact_info].to_excel(wr,sheet_name='TOP顧客')
         df_loyal[contact_info].to_excel(wr,sheet_name='忠誠顧客')
@@ -154,7 +150,6 @@ def Load_RFM_data():
     labelo_5= Label(root)
     labelo_5.grid(row=5)
     
-    """If the file selected is valid this will load the file into the Treeview"""
     #使用檔案路徑
     file_path = label_file["text"] 
     excel_filename = r"{}".format(file_path)
@@ -330,15 +325,12 @@ def Load_RFM_data():
 window = Tk()
 window.title('營利分析 & 顧客分群')
 
-# Frame for open file dialog
 file_frame = LabelFrame(window, text="檔案匯入", padx=20, pady=5, font=30)
 file_frame.grid(row=0)
 
-# The file/file path text
 label_file = Label(file_frame, text="尚未選擇檔案",pady=5)
 label_file.grid(row=1)
 
-# Buttons
 button1 = Button(file_frame, text="瀏覽檔案", command=lambda: File_dialog())
 button1.grid(row=2)
 
@@ -356,7 +348,7 @@ d2 = StringVar()
 entry_s = Entry(file_frame_2,textvariable=d1) #起始日期填寫
 entry_s.insert(1,'2023-01-23')
 entry_e = Entry(file_frame_2,textvariable=d2) #結束日期填寫
-# entry_e.insert(1,'2023-02-09')
+entry_e.insert(1,'2023-02-09')
 l_start.grid(row=6,column=0)
 entry_s.grid(row=6,column=1)
 l_end.grid(row=7,column=0,pady=5)
